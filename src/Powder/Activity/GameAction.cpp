@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "Gui/Host.hpp"
 #include "Gui/SdlAssert.hpp"
 #include "Gui/Host.hpp"
 #include "Gui/ViewUtil.hpp"
@@ -453,11 +454,11 @@ namespace Powder::Activity
 			pasteFinish->end = [this]() {
 				if (GetCurrentActionContext() == pasteContext.get())
 				{
-					if (auto p = GetSimMousePos())
+					if (pasteSave && !GetHost().GetTouchUi())
 					{
-						EndPaste(*p, GetIncludePressure());
+						EndPaste(pasteSave->pos, GetIncludePressure());
+						SetCurrentActionContext(rootContext);
 					}
-					SetCurrentActionContext(rootContext);
 				}
 			};
 			auto cancelAction = makeAction("PASTECANCEL", pastectxGroup);

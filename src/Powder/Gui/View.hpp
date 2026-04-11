@@ -467,6 +467,7 @@ namespace Powder::Gui
 		void ClosePopupInternal(Component &component);
 
 		Size extraSpacing = 0;
+		Pos2 globalOffset = { 0, 0 };
 
 		ComponentIndex FindOrAllocComponent(ComponentKey key);
 		Component &GetOrAllocComponent(ComponentKey key);
@@ -529,6 +530,7 @@ namespace Powder::Gui
 			MouseButtonIndex button;
 			Pos2 mouseDownPos;
 			std::optional<ComponentIndex> panComponent;
+			uint64_t startTick;
 		};
 		std::optional<ComponentMouseDownEvent> componentMouseDownEvent;
 		struct ComponentPanEvent
@@ -685,6 +687,16 @@ namespace Powder::Gui
 		};
 		ExitEventType ClassifyExitEvent(const SDL_Event &event) const;
 
+		void SetGlobalOffset(Vec2<int> newGlobalOffset)
+		{
+			globalOffset = newGlobalOffset;
+			shouldUpdateLayout = true;
+		}
+		Vec2<int> GetGlobalOffset() const
+		{
+			return globalOffset;
+		}
+
 		bool GetOnTop() const
 		{
 			return onTop;
@@ -782,6 +794,7 @@ namespace Powder::Gui
 		Rect GetRect() const;
 		bool IsMouseDown(MouseButtonIndex button) const;
 		bool IsClicked(MouseButtonIndex button) const;
+		bool IsHoldOrRightClicked();
 		std::optional<Pos2> GetPanBeginPos() const;
 		std::optional<Pos2> GetScrollDistance() const;
 		bool HasInputFocus() const;

@@ -34,7 +34,7 @@ namespace Powder::Activity
 		std::unique_ptr<Gui::StaticTexture> backgroundImage;
 
 		void HandleTick() override; // Call this at the end of overriding functions.
-		bool focusTitle = true;
+		bool focusTitle;
 
 	private:
 		std::future<std::unique_ptr<VideoBuffer>> thumbnailFuture;

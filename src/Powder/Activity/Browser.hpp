@@ -130,6 +130,20 @@ namespace Powder::Activity
 			game = newGame;
 		}
 
+		void SetPage(int32_t newPage)
+		{
+			QueueQuery({ newPage, query.str });
+		}
+		int32_t GetPage() const
+		{
+			return query.page;
+		}
+
+		Gui::PaginationContext &GetPaginationContext()
+		{
+			return paginationContext;
+		}
+
 		void Open();
 	};
 }

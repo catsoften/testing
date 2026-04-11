@@ -136,7 +136,7 @@ namespace ui
 	public:
 		bool MomentumScroll = true;
 		bool ShowAvatars = true;
-		bool TouchUI = false;
+		bool TouchUi = false;
 		WindowFrameOps windowFrameOps;
 
 		void SetScale              (int newScale               ) { windowFrameOps.scale               = newScale;               }

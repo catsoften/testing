@@ -173,7 +173,7 @@ struct Mat2
 		);
 	}
 
-	static Mat2<T> const Identity, MirrorX, MirrorY, CCW;
+	static Mat2<T> const Identity, MirrorX, MirrorY, CCW, CW;
 };
 
 template<typename T, typename V>
@@ -184,6 +184,8 @@ template<typename T, typename V>
 Mat2<T> const Mat2<T, V>::MirrorY = Mat2<T>(1, 0, 0, -1);
 template<typename T, typename V>
 Mat2<T> const Mat2<T, V>::CCW = Mat2<T>(0, 1, -1, 0); // reminder: the Y axis points down
+template<typename T, typename V>
+Mat2<T> const Mat2<T, V>::CW = Mat2<T>(0, -1, 1, 0);
 
 template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 constexpr static inline Rect<T> RectSized(Vec2<T>, Vec2<T>);

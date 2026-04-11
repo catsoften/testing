@@ -129,6 +129,11 @@ namespace Powder::Gui
 			pageInput.ForceRead();
 		}
 
+		bool HasNumber()
+		{
+			return pageInput.GetNumber().has_value();
+		}
+
 		template<class ReadWrite>
 		void Gui(View::ComponentKey key, ReadWrite rw)
 		{

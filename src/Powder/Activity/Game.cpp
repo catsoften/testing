@@ -7,6 +7,7 @@
 #include "Common/Div.hpp"
 #include "Common/Log.hpp"
 #include "IntroText.hpp"
+#include "Gui/Host.hpp"
 #include "Gui/SdlAssert.hpp"
 #include "Gui/StaticTexture.hpp"
 #include "Simulation/RenderThumbnail.hpp"
@@ -27,6 +28,7 @@
 #include "common/clipboard/Clipboard.h"
 #include "common/platform/Platform.h"
 #include "lua/CommandInterface.h"
+#include "prefs/GlobalPrefs.h"
 
 namespace Powder::Activity
 {
@@ -53,7 +55,9 @@ namespace Powder::Activity
 		lastScreenshotTime(time(nullptr)),
 		toolTipAlpha{ GetHost(), Gui::TargetAnimation<int32_t>::LinearProfile{ 400, 200 } },
 		infoTipAlpha{ GetHost(), Gui::TargetAnimation<int32_t>::LinearProfile{ 400, 200 } },
-		introTextAlpha{ GetHost(), Gui::TargetAnimation<int32_t>::LinearProfile{ 300 } }
+		introTextAlpha{ GetHost(), Gui::TargetAnimation<int32_t>::LinearProfile{ 300 } },
+		holdToClear(GlobalPrefs::Ref().Get("TouchUi.HoldToClear", true)),
+		showOverwrite(GlobalPrefs::Ref().Get("TouchUi.ShowOverwrite", false))
 	{
 		introText = GetIntroText();
 		decoSlots = {
@@ -389,9 +393,9 @@ namespace Powder::Activity
 		{
 			DrawBrush();
 		}
-		if (auto p = GetSimMousePos(); p && pasteSave && pasteSave->thumbnail)
+		if (pasteSave && pasteSave->thumbnail)
 		{
-			auto rect = RectSized(GetPlaceSavePos(*p) * CELL, pasteSave->thumbnail->Size());
+			auto rect = RectSized(GetPlaceSavePos() * CELL, pasteSave->thumbnail->Size());
 			drawSimFrame.BlendImage(pasteSave->thumbnail->Data(), 0x80, rect);
 			drawSimFrame.XorDottedRect(rect);
 		}
@@ -417,18 +421,21 @@ namespace Powder::Activity
 	void Game::CopyAction()
 	{
 		selectMode = SelectMode::copy;
+		touchMenu = TouchMenu::none;
 		SetCurrentActionContext(selectContext);
 	}
 
 	void Game::CutAction()
 	{
 		selectMode = SelectMode::cut;
+		touchMenu = TouchMenu::none;
 		SetCurrentActionContext(selectContext);
 	}
 
 	void Game::StampAction()
 	{
 		selectMode = SelectMode::stamp;
+		touchMenu = TouchMenu::none;
 		SetCurrentActionContext(selectContext);
 	}
 
@@ -574,6 +581,7 @@ namespace Powder::Activity
 
 	void Game::TransformPasteSave(Mat2x2 mulToTransform)
 	{
+		pasteSave->pos = pasteSave->pos + pasteSave->translate;
 		pasteSave->translate = Pos2::Zero; // reset offset
 		pasteSave->transform = mulToTransform * pasteSave->transform;
 		ApplyPasteTransform();
@@ -589,10 +597,109 @@ namespace Powder::Activity
 		pasteSave = PasteSave{};
 		pasteSave->original = std::move(newPasteSave);
 		ApplyPasteTransform();
+		touchMenu = TouchMenu::none;
 		SetCurrentActionContext(pasteContext);
 	}
 
-	Game::Pos2 Game::GetPlaceSavePos(Game::Pos2 pos) const
+	void Game::EndPasteGesture()
+	{
+		if (auto endPos = GetMousePos(); endPos && pasteSave && pasteGestureStart)
+		{
+			if (draggingPaste)
+			{
+				auto diff = *endPos - *pasteGestureStart;
+				if (std::hypot(diff.X, diff.Y) < 10)
+				{
+					EndPaste(pasteSave->pos, GetIncludePressure());
+					SetCurrentActionContext(rootContext);
+				}
+			}
+			else
+			{
+				auto pointRegion = [](const Pos2 p) {
+					// Note: y increases going down, so "above" is down
+					float div = std::hypot(p.X, p.Y);
+					bool upRight = (p.X - p.Y) / div > 0; // Is below y=x
+					bool downRight = (p.X + p.Y) / div > 0; // Is above y=-x
+					if (upRight)
+					{
+						return downRight ? DragRegion::right : DragRegion::top;
+					}
+					else
+					{
+						return downRight ? DragRegion::bottom : DragRegion::left;
+					}
+				};
+
+				auto cwRegion = [](const DragRegion r) {
+					switch (r)
+					{
+					case DragRegion::top:
+						return DragRegion::right;
+
+					case DragRegion::right:
+						return DragRegion::bottom;
+
+					case DragRegion::bottom:
+						return DragRegion::left;
+
+					case DragRegion::left:
+						return DragRegion::top;
+
+					default:
+						return DragRegion::top;
+					}
+				};
+
+				auto region1 = pointRegion(*pasteGestureStart - pasteSave->pos - pasteSave->translate);
+				auto region2 = pointRegion(*endPos - pasteSave->pos - pasteSave->translate);
+				if ((region1 == DragRegion::top && region2 == DragRegion::bottom) || (region1 == DragRegion::bottom && region2 == DragRegion::top))
+				{
+					// Vertical flip
+					TransformPasteSave(Mat2<int>::MirrorY);
+				}
+				else if ((region1 == DragRegion::left && region2 == DragRegion::right) || (region1 == DragRegion::right && region2 == DragRegion::left))
+				{
+					// Horizontal flip
+					TransformPasteSave(Mat2<int>::MirrorX);
+				}
+				else if (region1 == cwRegion(region2))
+				{
+					// Rotate 90deg CCW
+					TransformPasteSave(Mat2<int>::CCW);
+				}
+				else if (cwRegion(region1) == region2)
+				{
+					// Rotate 90deg CW
+					TransformPasteSave(Mat2<int>::CW);
+				}
+				else
+				{
+					// Nudge
+					switch (region1)
+					{
+					case DragRegion::top:
+						TranslatePasteSave({ 0, -1 });
+						break;
+
+					case DragRegion::right:
+						TranslatePasteSave({ 1, 0 });
+						break;
+
+					case DragRegion::bottom:
+						TranslatePasteSave({ 0, 1 });
+						break;
+
+					case DragRegion::left:
+						TranslatePasteSave({ -1, 0 });
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	Game::Pos2 Game::GetPlaceSavePos() const
 	{
 		auto [ trQuoX, trRemX ] = floorDiv(pasteSave->translate.X, CELL);
 		auto [ trQuoY, trRemY ] = floorDiv(pasteSave->translate.Y, CELL);
@@ -600,7 +707,7 @@ namespace Powder::Activity
 		if (trRemX) usefulSize.X -= CELL;
 		if (trRemY) usefulSize.Y -= CELL;
 		auto cursorCell = (usefulSize - Pos2{ CELL, CELL }) / 2 - Pos2{ trQuoX, trQuoY } * CELL; // stamp coordinates
-		auto unaligned = pos - cursorCell;
+		auto unaligned = pasteSave->pos - cursorCell;
 		auto quoX = floorDiv(unaligned.X, CELL).first;
 		auto quoY = floorDiv(unaligned.Y, CELL).first;
 		return { quoX, quoY };
@@ -609,7 +716,7 @@ namespace Powder::Activity
 	void Game::EndPaste(Pos2 pos, bool includePressure)
 	{
 		CreateHistoryEntry();
-		simulation->Load(pasteSave->transformed.get(), includePressure, GetPlaceSavePos(pos));
+		simulation->Load(pasteSave->transformed.get(), includePressure, GetPlaceSavePos());
 		SetSimPaused(pasteSave->transformed->paused || GetSimPaused());
 		// Client::Ref().MergeStampAuthorInfo(pasteSave->transformed->authors); // TODO-REDO_UI
 	}
@@ -729,6 +836,8 @@ namespace Powder::Activity
 
 	bool Game::HandleEvent(const SDL_Event &event)
 	{
+		auto &g = GetHost();
+
 		switch (event.type)
 		{
 		case SDL_MOUSEBUTTONDOWN:
@@ -738,7 +847,33 @@ namespace Powder::Activity
 			{
 				break;
 			}
+			if (auto p = GetSimMousePos(); p && event.type == SDL_MOUSEBUTTONDOWN && g.GetTouchUi())
+			{
+				if (zoomOnTouch)
+				{
+					zoomShown = true;
+				}
+				if (pasteSave && !pasteGestureStart)
+				{
+					pasteSave->posPrev = pasteSave->pos;
+					pasteGestureStart = p;
+					auto size = pasteSave->transformed->blockSize * CELL;
+					draggingPaste = RectSized(pasteSave->pos + pasteSave->translate - size / 2, size).Contains(*p);
+				}
+			}
 			DismissIntroText();
+			break;
+
+		case SDL_MOUSEBUTTONUP:
+			if (zoomOnTouch && zoomShown)
+			{
+				zoomOnTouch = false;
+			}
+			if (pasteGestureStart)
+			{
+				EndPasteGesture();
+				pasteGestureStart.reset();
+			}
 			break;
 		}
 #if DebugGuiView
@@ -768,6 +903,26 @@ namespace Powder::Activity
 					drawState->mouseMovedSinceLastTick = true;
 				}
 			}
+			if (auto p = GetSimMousePos(); p)
+			{
+				if (g.GetTouchUi())
+				{
+					if (zoomOnTouch && zoomShown)
+					{
+						zoomMetrics.to = *p - zoomMetrics.from.size / 2;
+						zoomMetrics = MakeZoomMetrics(zoomMetrics.from.size);
+					}
+					if (pasteSave && pasteGestureStart && draggingPaste)
+					{
+						pasteSave->pos = pasteSave->posPrev + *p - *pasteGestureStart;
+					}
+				}
+				else if (pasteSave)
+				{
+					pasteSave->pos = *p;
+				}
+			}
+
 			break;
 
 		case SDL_DROPFILE:

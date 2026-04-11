@@ -19,6 +19,7 @@
 #include "client/SaveFile.h"
 #include "client/SaveInfo.h"
 #include "client/http/ExecVoteRequest.h"
+#include "common/clipboard/Clipboard.h"
 #include "common/platform/Platform.h"
 #include "Gui/Host.hpp"
 #include "Gui/Icons.hpp"
@@ -49,8 +50,9 @@ namespace Powder::Activity
 
 	void Game::Gui()
 	{
+		auto &g = GetHost();
 		auto game = ScopedVPanel("game");
-		SetRootRect(GetHost().GetSize().OriginRect());
+		SetRootRect(g.GetSize().OriginRect());
 		{
 			auto top = ScopedHPanel("top");
 			{
@@ -60,6 +62,27 @@ namespace Powder::Activity
 					SetLayered(true);
 					GuiSim();
 					GuiNotifications();
+					if (!g.GetTouchUi())
+					{
+						touchMenu = TouchMenu::none;
+					}
+					switch (touchMenu)
+					{
+						case TouchMenu::none:
+							break;
+
+						case TouchMenu::main_:
+							GuiTouchMenu();
+							break;
+
+						case TouchMenu::quickOptions:
+							GuiTouchQuickOptions();
+							break;
+
+						case TouchMenu::brushOptions:
+							GuiTouchBrushOptions();
+							break;
+					}
 				}
 				GuiTools();
 			}
@@ -93,7 +116,7 @@ namespace Powder::Activity
 		if (selectContext->active)
 		{
 			Lang::Translation *tl = nullptr;
-			switch (*selectMode)
+			switch (*selectMode) // TODO TOUCH_UI: right click -> iconRemoveOutline
 			{
 			case SelectMode::copy : tl = &"DEFAULT_LANG_SELECTEXPL_COPY"_St ; break;
 			case SelectMode::cut  : tl = &"DEFAULT_LANG_SELECTEXPL_CUT"_St  ; break;
@@ -288,12 +311,24 @@ namespace Powder::Activity
 			UpdateDecoTools();
 			shouldUpdateDecoTools = false;
 		}
+		auto &g = GetHost();
 		if (shouldUpdateToolAtlas)
 		{
+			toolTextureDataSize = g.IfTouchUi(Point{ 35, 18 }, Point{ 26, 14 });
+			for (auto i = 0u; i < tools.size(); i++)
+			{
+				if (tools[i])
+				{
+					UpdateToolTexture(i);
+				}
+			}
 			UpdateToolAtlas();
 			shouldUpdateToolAtlas = false;
 		}
-		auto &g = GetHost();
+		if (g.GetTouchUi())
+		{
+			return;
+		}
 		auto toolButtonsPanel = ScopedHPanel("toolButtons");
 		SetMaxSizeSecondary(MaxSizeFitParent{});
 		SetSize(23);
@@ -525,27 +560,151 @@ namespace Powder::Activity
 
 	void Game::GuiRight()
 	{
+		auto &g = GetHost();
+
 		auto right = ScopedVPanel("right");
-		SetSize(17);
-		GuiQuickOptions();
-		GuiMenuSections();
+		if (g.GetTouchUi())
+		{
+			SetSize(32);
+			BeginVPanel("rightTop");
+			SetPadding(1);
+			SetSpacing(1);
+			SetAlignment(Gui::Alignment::top);
+
+			BeginButton("quickOptions", Gui::iconQuickOptions, touchMenu == TouchMenu::quickOptions ? ButtonFlags::stuck : ButtonFlags::none);
+			SetSize(30);
+			if (EndButton())
+			{
+				touchMenu = touchMenu == TouchMenu::quickOptions ? TouchMenu::none : TouchMenu::quickOptions;
+			}
+
+			BeginButton("brushOptions", Gui::iconBrushOptions, touchMenu == TouchMenu::brushOptions ? ButtonFlags::stuck : ButtonFlags::none);
+			SetSize(30);
+			if (EndButton())
+			{
+				touchMenu = touchMenu == TouchMenu::brushOptions ? TouchMenu::none : TouchMenu::brushOptions;
+			}
+
+			auto eraser = GetToolFromIdentifier("DEFAULT_PT_NONE");
+			BeginButton("eraser", Gui::iconEraser, GetSelectedTool(0) == eraser ? ButtonFlags::stuck : ButtonFlags::none);
+			SetSize(30);
+			if (EndButton())
+			{
+				if (GetSelectedTool(0) == eraser)
+				{
+					SelectTool(0, GetSelectedTool(1));
+					SelectTool(1, eraser);
+				}
+				else
+				{
+					SelectTool(1, GetSelectedTool(0));
+					SelectTool(0, eraser);
+				}
+			}
+
+			BeginButton("zoom", Gui::iconZoom, zoomShown || zoomOnTouch ? ButtonFlags::stuck : ButtonFlags::none);
+			SetSize(30);
+			if (EndButton())
+			{
+				if (zoomOnTouch)
+				{
+					zoomOnTouch = false;
+					SetCurrentActionContext(rootContext);
+				}
+				else if (zoomShown)
+				{
+					zoomShown = false;
+				}
+				else
+				{
+					zoomOnTouch = true;
+					SetCurrentActionContext(placeZoomContext);
+				}
+			}
+
+			BeginButton("undo", Gui::iconUndo, ButtonFlags::none);
+			SetEnabled(historyPosition);
+			SetSize(30);
+			if (EndButton())
+			{
+				UndoHistoryEntryAction();
+			}
+
+			BeginButton("redo", Gui::iconRedo, ButtonFlags::none);
+			SetEnabled(historyPosition < int32_t(history.size()));
+			SetSize(30);
+			if (EndButton())
+			{
+				RedoHistoryEntryAction();
+			}
+
+			if (selectContext->active || pasteContext->active)
+			{
+				BeginButton("endSelect", Gui::iconCross, ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF770000_argb);
+				SetSize(30);
+				if (EndButton())
+				{
+					SetCurrentActionContext(rootContext);
+				}
+			}
+
+			EndPanel();
+
+			BeginVPanel("rightBottom");
+			SetParentFillRatio(0);
+			SetPadding(1, 0, 1, 1);
+			SetSpacing(1);
+
+			BeginButton("elementSelect", Gui::iconPowder, ButtonFlags::none);
+			SetSize(61);
+			SetSizeSecondary(30);
+			SetParentFillRatio(0);
+			if (EndButton())
+			{
+				OpenElementSearch();
+			}
+
+			EndPanel();
+		}
+		else
+		{
+			SetSize(17);
+			GuiQuickOptions();
+			GuiMenuSections();
+		}
 	}
 
 	void Game::GuiSave()
 	{
 		auto &g = GetHost();
 		auto user = Client::Ref().GetAuthUser();
+		Size size = g.IfTouchUi(30, 17);
+
 		BeginButton("openSim", Gui::iconOpen, saveButtonsAltFunction ? ButtonFlags::stuck : ButtonFlags::none);
-		SetSize(17);
-		if (EndButton())
+		SetSize(size);
+		if (g.GetTouchUi())
 		{
-			if (saveButtonsAltFunction)
+			if (IsHoldOrRightClicked())
 			{
 				OpenLocalBrowser();
 			}
-			else
+			if (EndButton())
 			{
 				OpenOnlineBrowser();
+			}
+		}
+		else
+		{
+			if (EndButton())
+			{
+				if (saveButtonsAltFunction)
+				{
+					OpenLocalBrowser();
+				}
+				else
+				{
+					OpenOnlineBrowser();
+				}
 			}
 		}
 		auto *onlineSave = (save && std::holds_alternative<OnlineSave>(*save)) ? std::get<OnlineSave>(*save).get() : nullptr;
@@ -553,8 +712,8 @@ namespace Powder::Activity
 		auto ownSave = user && onlineSave && onlineSave->IsOwn();
 		BeginButton("reloadSim", Gui::iconReload, (saveButtonsAltFunction && onlineSave) ? ButtonFlags::stuck : ButtonFlags::none);
 		SetEnabled(bool(save));
-		SetSize(17);
-		if (IsClicked(SDL_BUTTON_RIGHT))
+		SetSize(size);
+		if (IsHoldOrRightClicked())
 		{
 			OpenOnlinePreview();
 		}
@@ -570,8 +729,8 @@ namespace Powder::Activity
 			}
 		}
 		{
-			constexpr Size overwriteWidth =  19;
-			constexpr Size renameWidth    = 132;
+			Size overwriteWidth = g.IfTouchUi(30, 19);
+			Size renameWidth = g.IfTouchUi(123, 132);
 			ByteString buttonText = BuildString("[", "DEFAULT_LANG_GAME_UNTITLEDSIM"_St, "]"); // TODO-REDO_UI-POSTCLEANUP: StringView
 			ByteString title;
 			bool merge = false;
@@ -601,13 +760,18 @@ namespace Powder::Activity
 			struct OpenInfo
 			{
 				bool overwrite;
+				bool forceLocal = false;
 			};
 			std::optional<OpenInfo> openInfo;
-			if (merge)
+			if (merge || (g.GetTouchUi() && !showOverwrite))
 			{
 				BeginButton("saveSim", ByteString::Build(Gui::iconSave, "\u0011\u0005", buttonText), saveButtonFlags | ButtonFlags::truncateText);
 				SetSize(overwriteWidth + renameWidth - 1);
 				SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+				if (g.GetTouchUi() && IsHoldOrRightClicked())
+				{
+					openInfo = OpenInfo{ false, true };
+				}
 				if (EndButton())
 				{
 					openInfo = OpenInfo{ false };
@@ -617,7 +781,6 @@ namespace Powder::Activity
 			{
 				BeginButton("overwriteSim", Gui::iconSave, saveButtonFlags);
 				SetSize(overwriteWidth);
-				SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
 				if (EndButton())
 				{
 					openInfo = OpenInfo{ true };
@@ -626,6 +789,10 @@ namespace Powder::Activity
 				BeginButton("renameSim", title, saveButtonFlags | ButtonFlags::truncateText);
 				SetSize(renameWidth);
 				SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+				if (g.GetTouchUi() && IsHoldOrRightClicked())
+				{
+					openInfo = OpenInfo{ false, true };
+				}
 				if (EndButton())
 				{
 					openInfo = OpenInfo{ false };
@@ -635,7 +802,7 @@ namespace Powder::Activity
 			{
 				auto gameSave = simulation->Save(GetIncludePressure(), RES.OriginRect());
 				gameSave->paused = GetSimPaused();
-				if (saveButtonsAltFunction || !user)
+				if (openInfo->forceLocal || saveButtonsAltFunction || !user)
 				{
 					auto saveFile = std::make_unique<SaveFile>(title);
 					if (localSave)
@@ -663,8 +830,8 @@ namespace Powder::Activity
 			}
 		}
 		{
-			constexpr Size upvoteWidth   = 39;
-			constexpr Size downvoteWidth = 15;
+			Size upvoteWidth   = g.IfTouchUi(54, 39);
+			Size downvoteWidth = g.IfTouchUi(30, 15);
 			if (execVoteRequest)
 			{
 				BeginButton("cancelVote", "", ButtonFlags::none);
@@ -729,37 +896,62 @@ namespace Powder::Activity
 		{
 			PushAboveThis(std::make_shared<Tags>(g, *onlineSave));
 		}
-		if (Button("clear", ByteString::Build(" ", Gui::iconNew, " "), 17)) // TODO-REDO_UI-POSTCLEANUP: remove padding when icon alignment has been fixed
+		BeginButton("clear", ByteString::Build(" ", Gui::iconNew, " "), ButtonFlags::none); // TODO-REDO_UI-POSTCLEANUP: remove padding when icon alignment has been fixed
+		SetSize(size);
+		if (g.GetTouchUi() && holdToClear && IsHoldOrRightClicked())
 		{
 			ClearSim();
 		}
-		{
-			std::string text;
-			if (user)
-			{
-				text = BuildString(Gui::iconKeyOutline, "\u0011\u0005", user->Username);
-			}
-			else
-			{
-				text = BuildString(Gui::iconKeyOutline, "\u0011\u0005", "\bg[", "DEFAULT_LANG_GAME_SIGNIN"_St, "]");
-			}
-			BeginButton("user", text, ButtonFlags::truncateText);
-		}
-		SetSize(92);
-		SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
 		if (EndButton())
 		{
-			if (user)
+			if (g.GetTouchUi() && holdToClear)
 			{
-				PushAboveThis(std::make_shared<Profile>(g, user->Username));
+				VisualLog(BuildString("DEFAULT_LANG_GAME_HOLDTOCLEAR"_St));
 			}
 			else
 			{
-				PushAboveThis(std::make_shared<Login>(*this));
+				ClearSim();
+			}
+		}
+		if (g.GetTouchUi())
+		{
+			BeginButton("menu", Gui::iconMenu, touchMenu == TouchMenu::main_ ? ButtonFlags::stuck : ButtonFlags::none);
+			SetSize(37);
+			if (EndButton())
+			{
+				touchMenu = touchMenu == TouchMenu::main_ ? TouchMenu::none : TouchMenu::main_;
+			}
+		}
+		else
+		{
+			{
+				std::string text;
+				if (user)
+				{
+					text = BuildString(Gui::iconKeyOutline, "\u0011\u0005", user->Username);
+				}
+				else
+				{
+					text = BuildString(Gui::iconKeyOutline, "\u0011\u0005", "\bg[", "DEFAULT_LANG_GAME_SIGNIN"_St, "]");
+				}
+				BeginButton("user", text, ButtonFlags::truncateText);
+			}
+			SetSize(92);
+			SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+			if (EndButton())
+			{
+				if (user)
+				{
+					PushAboveThis(std::make_shared<Profile>(g, user->Username));
+				}
+				else
+				{
+					PushAboveThis(std::make_shared<Login>(*this));
+				}
 			}
 		}
 		BeginButton("settings", Gui::iconCheckmark, ButtonFlags::none);
-		SetSize(15);
+		SetSize(g.IfTouchUi(30, 15));
 		SetTextPadding(0);
 		if (EndButton())
 		{
@@ -902,8 +1094,11 @@ namespace Powder::Activity
 
 	void Game::GuiBottom()
 	{
+		auto &g = GetHost();
+		Size size = g.IfTouchUi(30, 15);
+
 		auto bottom = ScopedHPanel("bottom");
-		SetSize(17);
+		SetSize(g.IfTouchUi(32, 17));
 		SetPadding(1);
 		SetSpacing(1);
 		{
@@ -923,17 +1118,314 @@ namespace Powder::Activity
 				"\u0011\u00F8\u000F\u0001\u0001\u00FF",
 				Gui::iconColors3
 			), showRenderer ? ButtonFlags::stuck : ButtonFlags::none);
-			SetSize(15);
+			SetSize(size);
 			SetTextPadding(0);
 			if (EndButton())
 			{
 				showRenderer = !showRenderer;
 			}
-			if (Button("togglePause", Gui::iconPause, 15, GetSimPaused() ? ButtonFlags::stuck : ButtonFlags::none))
+			if (Button("togglePause", Gui::iconPause, size, GetSimPaused() ? ButtonFlags::stuck : ButtonFlags::none))
 			{
 				ToggleSimPausedAction();
 			}
 		}
+	}
+
+	void Game::GuiTouchMenu()
+	{
+		constexpr int buttonSize = 31;
+		constexpr int buttonCount = 7;
+
+		auto alignedButton = [this](ComponentKey key, StringView text, bool condition) {
+			BeginButton(key, text, condition ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+			SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+			SetSize(30);
+			SetTextPadding(8);
+			return EndButton();
+		};
+
+		auto mainMenu = ScopedVPanel("mainMenu");
+		SetAlignment(Gui::Alignment::bottom);
+		SetSizeSecondary(130);
+		ForcePosition(Pos2{ RES.X - 130, RES.Y - 167 - buttonSize * buttonCount });
+		SetSpacing(1);
+
+		if (alignedButton("exit", BuildString(Gui::iconPowered, " ", "DEFAULT_LANG_GAMEMENU_EXIT"_St), false))
+		{
+			QuitAction();
+		}
+
+		auto user = Client::Ref().GetAuthUser();
+		ByteString text = BuildString("\bg[", "DEFAULT_LANG_GAME_SIGNIN"_St, "]");
+		if (user)
+		{
+			text = user->Username;
+		}
+		BeginButton("user", BuildString(Gui::iconKeyOutline, "\u0011\u0005", text), ButtonFlags::truncateText, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(30);
+		SetTextPadding(8);
+		SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+		if (EndButton())
+		{
+			if (user)
+			{
+				PushAboveThis(std::make_shared<Profile>(GetHost(), user->Username));
+			}
+			else
+			{
+				PushAboveThis(std::make_shared<Login>(*this));
+			}
+		}
+
+		if (alignedButton("stepFrame", BuildString(Gui::iconStepFrame, " ", "DEFAULT_LANG_GAMEMENU_STEPFRAME"_St), false))
+		{
+			DoSimFrameStep();
+		}
+		if (alignedButton("findElement", BuildString(Gui::iconSearchOutline, " ", "DEFAULT_LANG_GAMEMENU_FINDELEMENT"_St), (bool)rendererSettings.findingElement))
+		{
+			ToggleFindAction();
+		}
+
+		BeginHPanel("grid");
+		SetSize(30);
+
+		BeginButton("showGrid", BuildString(Gui::iconGrid, " ", "DEFAULT_LANG_GAMEMENU_GRID"_St), rendererSettings.gridSize ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+		SetSize(70);
+		SetTextPadding(8);
+		if (EndButton())
+		{
+			rendererSettings.gridSize = rendererSettings.gridSize ? 0 : 1;
+		}
+		BeginButton("gridLarger", "+", ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(30);
+		if (EndButton())
+		{
+			GrowGridAction();
+		}
+		BeginButton("gridSmaller", "-", ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(30);
+		if (EndButton())
+		{
+			ShrinkGridAction();
+		}
+
+		EndPanel();
+
+		if (alignedButton("debugHud", BuildString(Gui::iconDebugHud, " ", "DEFAULT_LANG_GAMEMENU_DEBUGHUD"_St), debugHud && hud))
+		{
+			if (!hud)
+			{
+				ToggleHudAction();
+				debugHud = true;
+			}
+			else
+			{
+				ToggleDebugHudAction();
+			}
+		}
+		if (alignedButton("showHud", BuildString(Gui::iconHud, " ", "DEFAULT_LANG_GAMEMENU_SHOWHUD"_St), hud))
+		{
+			ToggleHudAction();
+		}
+		if (alignedButton("stampBrowser", BuildString(Gui::iconStamp, " ", "DEFAULT_LANG_GAMEMENU_STAMPBROWSER"_St), false))
+		{
+			OpenStampBrowser();
+		}
+	}
+
+	void Game::GuiTouchQuickOptions()
+	{
+		auto alignedButton = [this](ComponentKey key, StringView text, bool condition) {
+			BeginButton(key, text, condition ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+			SetTextAlignment(Gui::Alignment::left, Gui::Alignment::center);
+			SetSize(30);
+			SetTextPadding(8);
+			return EndButton();
+		};
+
+		auto quickOptionsMenu = ScopedVPanel("quickOptionsMenu");
+		SetAlignment(Gui::Alignment::top);
+		SetSizeSecondary(130);
+		ForcePosition(Pos2{ RES.X - 130, 1 });
+		SetSpacing(1);
+
+		if (alignedButton("sandEffect", BuildString(Gui::iconPowder, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_SANDEFFECT"_St), GetSandEffect()))
+		{
+			ToggleSandEffectAction();
+		}
+		if (alignedButton("gravityField", BuildString(Gui::iconLensing, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_GRAVITYFIELD"_St), GetDrawGravity()))
+		{
+			ToggleDrawGravityAction();
+		}
+		if (alignedButton("decorations", BuildString(Gui::iconDeco, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_DECORATIONS"_St), GetDrawDeco()))
+		{
+			ToggleDrawDecoAction();
+		}
+		if (alignedButton("newtonianGravity", BuildString(Gui::iconGravity, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_NEWTONIANGRAVITY"_St), GetNewtonianGravity()))
+		{
+			ToggleNewtonianAction();
+		}
+		if (alignedButton("ambientHeat", BuildString(Gui::iconTemperatureOutline, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_AMBIENTHEAT"_St), GetAmbientHeat()))
+		{
+			ToggleAmbientHeatAction();
+		}
+		if (alignedButton("console", BuildString(Gui::iconConsole, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_SHOWCONSOLE"_St), false))
+		{
+			OpenConsoleAction();
+		}
+		if (alignedButton("resetSpark", BuildString(Gui::iconElectronic, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_RESETSPARK"_St), false))
+		{
+			ResetSparkAction();
+		}
+		if (alignedButton("resetAmbientHeat", BuildString(Gui::iconTemperatureOutline, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_RESETAMBIENTHEAT"_St), false))
+		{
+			ResetAmbientHeatAction();
+		}
+		if (alignedButton("resetAir", BuildString(Gui::iconWind, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_RESETAIR"_St), false))
+		{
+			ResetAirAction();
+		}
+		if (alignedButton("invertAir", BuildString(Gui::iconInvertAir, " ", "DEFAULT_LANG_GAMEQUICKOPTIONS_INVERTAIR"_St), false))
+		{
+			InvertAirAction();
+		}
+	}
+
+	void Game::GuiTouchBrushOptions()
+	{
+		auto quickOptionsMenu = ScopedVPanel("brushOptionsMenu");
+		SetAlignment(Gui::Alignment::top);
+		SetSizeSecondary(130);
+		ForcePosition(Pos2{ RES.X - 130, 32 });
+		SetSpacing(1);
+
+		BeginHPanel("brushShape");
+		SetSize(30);
+
+		BeginButton("circle", Gui::iconFanFrame, brushIndex == 0 ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(50);
+		if (EndButton())
+		{
+			SetBrushIndex(0);
+		}
+		BeginButton("square", Gui::iconSquare, brushIndex == 1 ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(40);
+		if (EndButton())
+		{
+			SetBrushIndex(1);
+		}
+		BeginButton("triangle", Gui::iconTriangle, brushIndex == 2 ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(40);
+		if (EndButton())
+		{
+			SetBrushIndex(2);
+		}
+
+		EndPanel();
+
+		BeginHPanel("brushSize");
+		SetSize(30);
+
+		auto radius = GetBrushRadius();
+		BeginButton("larger", "+",  ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetEnabled(radius.X < 200 || radius.Y < 200);
+		SetSize(65);
+		if (IsHoldOrRightClicked())
+		{
+			AdjustBrushSize(50, 25, false);
+		}
+		if (EndButton())
+		{
+			AdjustBrushSize(1, 1, true);
+		}
+		BeginButton("smaller", "-", ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetEnabled(radius.X || radius.Y);
+		SetSize(65);
+		if (IsHoldOrRightClicked())
+		{
+			AdjustBrushSize(-50, -50, false);
+		}
+		if (EndButton())
+		{
+			AdjustBrushSize(-1, -1, true);
+		}
+
+		EndPanel();
+
+		BeginHPanel("lineRect");
+		SetSize(30);
+
+		BeginButton("line", BuildString(Gui::iconLineDraw, " ", "DEFAULT_LANG_GAMEBRUSHOPTIONS_LINE"_St), brushModeLine ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(65);
+		if (EndButton())
+		{
+			brushModeLine = !brushModeLine;
+			if (brushModeLine)
+			{
+				brushModeRect = false;
+			}
+		}
+
+		BeginButton("rectangle", BuildString(Gui::iconRectangleDraw, " ", "DEFAULT_LANG_GAMEBRUSHOPTIONS_BOX"_St), brushModeRect ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(65);
+		if (EndButton())
+		{
+			brushModeRect = !brushModeRect;
+			if (brushModeRect)
+			{
+				brushModeLine = false;
+			}
+		}
+
+		EndPanel();
+
+		BeginHPanel("replaceStamp");
+		SetSize(30);
+
+		BeginButton("repalce", BuildString(Gui::iconReload, " ", "DEFAULT_LANG_GAMEBRUSHOPTIONS_REPLACE"_St), simulation->replaceModeFlags & REPLACE_MODE ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(65);
+		if (EndButton())
+		{
+			ToggleReplaceAction();
+		}
+		BeginButton("createStamp", BuildString(Gui::iconStamp, " ", "DEFAULT_LANG_GAMEBRUSHOPTIONS_STAMP"_St), ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(65);
+		if (IsHoldOrRightClicked())
+		{
+			LoadLastStampAction();
+		}
+		if (EndButton())
+		{
+			StampAction();
+		}
+
+		EndPanel();
+
+		BeginHPanel("clipboard");
+		SetSize(30);
+
+		BeginButton("copy", Gui::iconCopy, ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(33);
+		if (EndButton())
+		{
+			CopyAction();
+		}
+		BeginButton("cut", Gui::iconCut, ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetSize(32);
+		if (EndButton())
+		{
+			CutAction();
+		}
+		BeginButton("paste", BuildString(Gui::iconStamp, " ", "DEFAULT_LANG_GAMEBRUSHOPTIONS_PASTE"_St), ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF000000_argb);
+		SetEnabled(Clipboard::GetClipboardData());
+		SetSize(65);
+		if (EndButton())
+		{
+			PasteAction();
+		}
+
+		EndPanel();
 	}
 
 	bool Game::GuiToolButton(Gui::View &view, const GameToolInfo &info, Gui::StaticTexture &externalToolAtlasTexture, bool indicateFavorite) const

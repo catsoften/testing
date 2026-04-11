@@ -3,6 +3,7 @@
 #include "Main.hpp"
 #include "Game.hpp"
 #include "SaveButton.hpp"
+#include "SetPage.hpp"
 #include "Gui/Colors.hpp"
 #include "Gui/Host.hpp"
 #include "Gui/Icons.hpp"
@@ -230,30 +231,64 @@ namespace Powder::Activity
 
 	void Browser::GuiSearch()
 	{
+		auto &g = GetHost();
 		auto search = ScopedHPanel("search");
-		SetSize(GetHost().GetCommonMetrics().heightToFitSize);
+		SetSize(g.GetCommonMetrics().heightToFitSize);
 		SetPadding(Common{});
 		SetSpacing(Common{});
-		GuiSearchLeft();
-		BeginTextbox("query", query.str, BuildString("[", "DEFAULT_LANG_BROWSER_QUERY"_St, "]"), TextboxFlags::none);
-		if (focusQuery)
+
+		if (g.GetTouchUi() && GetSelectedCount())
 		{
-			GiveInputFocus();
-			TextboxSelectAll();
-			focusQuery = false;
+			BeginButton("endSelect", Gui::iconCross, ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF770000_argb);
+			SetSize(Common{});
+			if (EndButton())
+			{
+				ClearSelection();
+			}
+			GuiManage();
 		}
-		if (EndTextbox())
+		else
 		{
-			QueueQuery({ 0, query.str });
+			if (g.GetTouchUi())
+			{
+				BeginButton("close", Gui::iconCross, ButtonFlags::none, 0xFFFFFFFF_argb, 0xFF770000_argb);
+				SetSize(Common{});
+				if (EndButton())
+				{
+					Exit();
+				}
+			}
+			GuiSearchLeft();
+			BeginTextbox("query", query.str, BuildString("[", "DEFAULT_LANG_BROWSER_QUERY"_St, "]"), TextboxFlags::none);
+			if (focusQuery)
+			{
+				GiveInputFocus();
+				TextboxSelectAll();
+				focusQuery = false;
+			}
+			if (EndTextbox())
+			{
+				QueueQuery({ 0, query.str });
+			}
+			SetSpacing(-1);
+			if (Button("clear", Gui::iconCross, Common{}))
+			{
+				SetQuery({});
+				FocusQuery();
+			}
+			SetSpacing(Common{});
+			if (g.GetTouchUi())
+			{
+				BeginButton("page", "DEFAULT_LANG_BROWSER_PAGE"_St(query.page + 1), ButtonFlags::none);
+				SetEnabled(paginationContext.GetPageCount() > 1);
+				SetSize(g.GetCommonMetrics().bigButton);
+				if (EndButton())
+				{
+					PushAboveThis(std::make_shared<Powder::Activity::SetPage>(*this));
+				}
+			}
+			GuiSearchRight();
 		}
-		SetSpacing(-1);
-		if (Button("clear", Gui::iconCross, Common{}))
-		{
-			SetQuery({});
-			FocusQuery();
-		}
-		SetSpacing(Common{});
-		GuiSearchRight();
 	}
 
 	bool Browser::CanLoadNextPage() const
@@ -304,8 +339,11 @@ namespace Powder::Activity
 		GuiSearch();
 		Separator("searchSeparator");
 		GuiGrid();
-		Separator("bottomSeparator");
-		GuiBottom();
+		if (!GetHost().GetTouchUi())
+		{
+			Separator("bottomSeparator");
+			GuiBottom();
+		}
 	}
 
 	Browser::Size2 Browser::GetPageSize() const
@@ -367,7 +405,10 @@ namespace Powder::Activity
 		{
 			SetQuery({});
 		}
-		FocusQuery();
+		if (!GetHost().GetTouchUi())
+		{
+			FocusQuery();
+		}
 	}
 
 	bool Browser::GuiQuickNav()

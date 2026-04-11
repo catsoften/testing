@@ -455,7 +455,7 @@ int Main(int argc, char *argv[])
 	engine.Begin();
 	engine.SetFastQuit(prefs.Get("FastQuit", true));
 	engine.SetGlobalQuit(prefs.Get("GlobalQuit", true));
-	engine.TouchUI = prefs.Get("TouchUI", DEFAULT_TOUCH_UI);
+	engine.TouchUi = prefs.Get("TouchUi.Enable", DEFAULT_TOUCH_UI);
 	engine.windowFrameOps = windowFrameOps;
 
 	if (auto drawLimit = GlobalPrefs::Ref().Get<int>("DrawLimit"); drawLimit && *drawLimit == -1)

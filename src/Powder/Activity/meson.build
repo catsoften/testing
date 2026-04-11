@@ -23,6 +23,7 @@ powder_src += files(
 	'Property.cpp',
 	'SaveButton.cpp',
 	'Saver.cpp',
+	'SetPage.cpp',
 	'Settings.cpp',
 	'Sign.cpp',
 	'StampBrowser.cpp',

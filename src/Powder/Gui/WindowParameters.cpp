@@ -18,6 +18,12 @@ namespace Powder::Gui
 		Recreate recreate; // TODO-REDO_UI: actually make the decisions
 		recreate.renderer = false;
 		recreate.window = false;
+
+		if (windowSize.X != other.windowSize.X || windowSize.Y != other.windowSize.Y)
+		{
+			recreate.window = true;
+		}
+
 		return recreate;
 	}
 

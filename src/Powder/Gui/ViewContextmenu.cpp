@@ -6,7 +6,7 @@ namespace Powder::Gui
 	bool View::MaybeBeginContextmenu(ComponentKey key)
 	{
 		SetHandleButtons(true);
-		if (MaybeBeginPopup(key, IsClicked(SDL_BUTTON_RIGHT)))
+		if (MaybeBeginPopup(key, IsHoldOrRightClicked()))
 		{
 			SetPadding(1);
 			SetSpacing(-1);

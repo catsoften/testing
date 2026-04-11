@@ -168,15 +168,20 @@ namespace Powder
 				windowParameters.fixedScale = 1;
 				setPrefs = true;
 			}
+			if (prefs.Get("TouchUi.Enable", false))
+			{
+				windowParameters.windowSize = { 644, 416 };
+			}
 			if (setPrefs)
 			{
 				windowParameters.SetPrefs();
 			}
 			host.SetWindowParameters(windowParameters);
-			host.SetMomentumScroll(prefs.Get("MomentumScroll", true));
-			host.SetShowAvatars   (prefs.Get("ShowAvatars"   , true));
-			host.SetFastQuit      (prefs.Get("FastQuit"      , true));
-			host.SetGlobalQuit    (prefs.Get("GlobalQuit"    , true));
+			host.SetMomentumScroll(prefs.Get("MomentumScroll" , true ));
+			host.SetShowAvatars   (prefs.Get("ShowAvatars"    , true ));
+			host.SetFastQuit      (prefs.Get("FastQuit"       , true ));
+			host.SetGlobalQuit    (prefs.Get("GlobalQuit"     , true ));
+			host.SetTouchUi       (prefs.Get("TouchUi.Enable" , false));
 		}
 
 		void HandleRedirect(Prefs &prefs, Arguments &arguments, Client &client)

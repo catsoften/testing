@@ -233,7 +233,7 @@ namespace Powder::Gui
 	void View::UpdateLayoutRoot(Component &component)
 	{
 		UpdateLayoutContentSize(Axis::horizontal, component);
-		component.unscrolledPos = component.layout.rootRect->pos;
+		component.unscrolledPos = component.layout.rootRect->pos + globalOffset;
 		UpdateLayoutFillSpace(component);
 	}
 

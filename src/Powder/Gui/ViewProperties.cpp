@@ -324,6 +324,20 @@ namespace Powder::Gui
 		return componentMouseClickEvent && GetCurrentComponentIndex() == componentMouseClickEvent->component && componentMouseClickEvent->button == button;
 	}
 
+	bool View::IsHoldOrRightClicked()
+	{
+		if (host.GetTouchUi() && componentMouseDownEvent && GetCurrentComponentIndex() == componentMouseDownEvent->component && componentMouseDownEvent->button == SDL_BUTTON_LEFT && SDL_GetTicks() - componentMouseDownEvent->startTick > 500 && IsHovered())
+		{
+			componentMouseDownEvent.reset();
+			return true;
+		}
+		if (IsClicked(SDL_BUTTON_RIGHT))
+		{
+			return true;
+		}
+		return false;
+	}
+
 	std::optional<View::Pos2> View::GetScrollDistance() const
 	{
 		if (componentMouseScrollEvent && GetCurrentComponentIndex() == componentMouseScrollEvent->component)

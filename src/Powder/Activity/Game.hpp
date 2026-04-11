@@ -125,7 +125,8 @@ namespace Powder::Activity
 
 		using ToolSlotIndex = int32_t;
 		static constexpr ToolSlotIndex toolSlotCount = 4;
-		static constexpr Point toolTextureDataSize   = { 26, 14 };
+		Point toolTextureDataSize = { 26, 14 };
+		bool shouldUpdateToolAtlas = true;
 
 	private:
 		using BrushIndex = int32_t;
@@ -151,7 +152,6 @@ namespace Powder::Activity
 		bool toolStrengthDiv10 = false;
 		float GetToolStrength() const;
 
-		bool shouldUpdateToolAtlas = true;
 		void UpdateToolTexture(ToolIndex index);
 		PlaneAdapter<std::vector<pixel>> toolAtlas;
 		void UpdateToolAtlas();
@@ -398,6 +398,18 @@ namespace Powder::Activity
 		void GuiQuickOptions();
 		void GuiMenuSections();
 
+		enum class TouchMenu
+		{
+			none,
+			main_, // Stupid macro expands "main" to SDL_main on Android
+			quickOptions,
+			brushOptions,
+		};
+		TouchMenu touchMenu;
+		void GuiTouchMenu();
+		void GuiTouchQuickOptions();
+		void GuiTouchBrushOptions();
+
 		void OpenElementSearch();
 		void OpenProperty();
 
@@ -444,6 +456,8 @@ namespace Powder::Activity
 		std::shared_ptr<Action> pasteFinish;
 		struct PasteSave
 		{
+			Pos2 pos = { XRES / 2, YRES / 2 };
+			Pos2 posPrev = pos;
 			std::unique_ptr<GameSave> original;
 			std::unique_ptr<GameSave> transformed;
 			Mat2x2 transform = Mat2x2::Identity;
@@ -452,7 +466,17 @@ namespace Powder::Activity
 			std::unique_ptr<VideoBuffer> thumbnail;
 		};
 		std::optional<PasteSave> pasteSave;
-		Pos2 GetPlaceSavePos(Pos2 pos) const;
+		std::optional<Pos2> pasteGestureStart;
+		bool draggingPaste = false;
+		enum class DragRegion
+		{
+			top,
+			right,
+			bottom,
+			left,
+		};
+		void EndPasteGesture();
+		Pos2 GetPlaceSavePos() const;
 		void EndPaste(Pos2 pos, bool includePressure);
 		void ApplyPasteTransform();
 		void TranslatePasteSave(Pos2 addToTranslate);
@@ -600,6 +624,7 @@ namespace Powder::Activity
 		void Init();
 
 		bool zoomShown = false;
+		bool zoomOnTouch = false;
 		ZoomMetrics zoomMetrics;
 		bool CheckZoomMetrics(const ZoomMetrics &newMetrics) const;
 
@@ -615,6 +640,8 @@ namespace Powder::Activity
 		bool threadedRendering = true;
 		bool wantTextInputOverride = false;
 		bool hud = true;
+		bool holdToClear;
+		bool showOverwrite;
 		uint32_t debugFlags = 0;
 
 		static std::optional<CustomGOLData> CheckCustomGolToAdd(String ruleString, String nameString, RGB color1, RGB color2);

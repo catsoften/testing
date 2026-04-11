@@ -103,10 +103,13 @@ DEFAULT_LANG_BROWSER_CLEARSELECTION simple "Clear selection"
 DEFAULT_LANG_BROWSER_DESELECT       simple "Deselect"
 DEFAULT_LANG_BROWSER_NEXTPAGE       simple "Next"
 DEFAULT_LANG_BROWSER_OPEN           simple "Open"
+DEFAULT_LANG_BROWSER_PAGE           simple "Page @0@" # @0@: page number
 DEFAULT_LANG_BROWSER_PREVPAGE       simple "Prev"
 DEFAULT_LANG_BROWSER_QUERY          simple "search, F1 for help" # placeholder shown when the search box is empty
 DEFAULT_LANG_BROWSER_SEARCHFAILED   simple "Search failed: @0@" # @0@: reason
 DEFAULT_LANG_BROWSER_SELECT         simple "Select"
+
+DEFAULT_LANG_SETPAGE_SELECTPAGE simple "Select page"
 
 DEFAULT_LANG_CONFIRMQUIT simple "Exit game"
 
@@ -137,8 +140,9 @@ DEFAULT_RENDERERPRESET_PRES     simple "Pressure Display"
 DEFAULT_RENDERERPRESET_VEL      simple "Velocity Display"
 DEFAULT_RENDERERPRESET_VORT     simple "Vorticity Display"
 
-DEFAULT_LANG_ELEMENTSEARCH_TITLE simple "Element search"
-DEFAULT_LANG_ELEMENTSEARCH_QUERY simple "name, description, or category" # placeholder shown when the search box is empty
+DEFAULT_LANG_ELEMENTSEARCH_SELECT simple "Select element"
+DEFAULT_LANG_ELEMENTSEARCH_TITLE  simple "Element search"
+DEFAULT_LANG_ELEMENTSEARCH_QUERY  simple "name, description, or category" # placeholder shown when the search box is empty
 
 DEFAULT_LANG_FORMAT_TIME_JUSTNOW simple "just now"
 DEFAULT_LANG_FORMAT_TIME_YEARS   plural2   "a year ago"   "@0@ years ago"
@@ -158,6 +162,7 @@ DEFAULT_LANG_GAME_DROPSTAMPERRORDESC  simple "Dropped stamp could not be loaded:
 DEFAULT_LANG_GAME_DROPSTAMPERROR      simple "Error loading stamp"
 DEFAULT_LANG_GAME_EDGETIP             simple "Edge Mode: @0@" # @0@: one of DEFAULT_LANG_SIMSTATE_EDGE_*
 DEFAULT_LANG_GAME_ELEMENTSEARCH       simple "Search for elements"
+DEFAULT_LANG_GAME_HOLDTOCLEAR         simple "Hold to clear"
 DEFAULT_LANG_GAME_LIFECUSTDESC        simple "Custom GOL type: @0@" # @0@: rulestring
 DEFAULT_LANG_GAME_NOCLIPBOARD         simple "Nothing on the clipboard to paste"
 DEFAULT_LANG_GAME_NOLASTSTAMP         simple "No last stamp to paste"
@@ -181,6 +186,12 @@ DEFAULT_LANG_GAME_UPDATEKIND_MOD      simple "A new mod update"
 DEFAULT_LANG_GAME_UPDATEKIND_SNAPSHOT simple "A new snapshot"
 DEFAULT_LANG_GAME_UPDATEKIND_STABLE   simple "A new beta"
 DEFAULT_LANG_GAME_UPVOTE              simple "Vote"
+
+DEFAULT_LANG_GAMEBRUSHOPTIONS_BOX     simple "Box"
+DEFAULT_LANG_GAMEBRUSHOPTIONS_LINE    simple "Line"
+DEFAULT_LANG_GAMEBRUSHOPTIONS_PASTE   simple "Paste"
+DEFAULT_LANG_GAMEBRUSHOPTIONS_REPLACE simple "Replace"
+DEFAULT_LANG_GAMEBRUSHOPTIONS_STAMP   simple "Stamp"
 
 DEFAULT_LANG_GAMEHUD_FILT0       simple "set color"
 DEFAULT_LANG_GAMEHUD_FILT1       simple "AND"
@@ -215,6 +226,25 @@ DEFAULT_LANG_GAMEHUD_SDELETE    simple "SPECIFIC DELETE"
 DEFAULT_LANG_GAMEHUD_TEMP       simple "Temp: @0@" # @0@: temp property formatted as temperature
 DEFAULT_LANG_GAMEHUD_TMP        simple "Tmp: @0@" # @0@: tmp property
 DEFAULT_LANG_GAMEHUD_TMP2       simple "Tmp2: @0@" # @0@: tmp2 property
+
+DEFAULT_LANG_GAMEMENU_DEBUGHUD     simple "Debug HUD"
+DEFAULT_LANG_GAMEMENU_EXIT         simple "Exit the game"
+DEFAULT_LANG_GAMEMENU_FINDELEMENT  simple "Find element"
+DEFAULT_LANG_GAMEMENU_GRID         simple "Grid"
+DEFAULT_LANG_GAMEMENU_SHOWHUD      simple "Show HUD"
+DEFAULT_LANG_GAMEMENU_STAMPBROWSER simple "Stamp browser"
+DEFAULT_LANG_GAMEMENU_STEPFRAME    simple "Single-step frame"
+
+DEFAULT_LANG_GAMEQUICKOPTIONS_AMBIENTHEAT      simple "Ambient heat"
+DEFAULT_LANG_GAMEQUICKOPTIONS_DECORATIONS      simple "Draw decorations"
+DEFAULT_LANG_GAMEQUICKOPTIONS_GRAVITYFIELD     simple "Draw gravity field"
+DEFAULT_LANG_GAMEQUICKOPTIONS_INVERTAIR        simple "Invert air"
+DEFAULT_LANG_GAMEQUICKOPTIONS_NEWTONIANGRAVITY simple "Newtonian gravity"
+DEFAULT_LANG_GAMEQUICKOPTIONS_RESETAIR         simple "Reset air"
+DEFAULT_LANG_GAMEQUICKOPTIONS_RESETAMBIENTHEAT simple "Reset ambient heat"
+DEFAULT_LANG_GAMEQUICKOPTIONS_RESETSPARK       simple "Reset spark"
+DEFAULT_LANG_GAMEQUICKOPTIONS_SANDEFFECT       simple "Sand effect"
+DEFAULT_LANG_GAMEQUICKOPTIONS_SHOWCONSOLE      simple "Show console"
 
 DEFAULT_LANG_LOCALBROWSER_DELETE  simple "Delete"
 DEFAULT_LANG_LOCALBROWSER_NOSAVES simple "No local saves found"
@@ -400,6 +430,11 @@ DEFAULT_LANG_SETTINGS_TAB_SIMULATION simple "Simulation"
 DEFAULT_LANG_SETTINGS_TAB_VIDEO      simple "Video"
 
 DEFAULT_LANG_SETTINGS_TITLE simple "Settings"
+
+DEFAULT_LANG_SETTINGS_TOUCHUI               simple "Touchscreen UI"
+DEFAULT_LANG_SETTINGS_TOUCHUI_ENABLE        simple "Touchscreen friendly UI"
+DEFAULT_LANG_SETTINGS_TOUCHUI_HOLDTOCLEAR   simple "Require holding clear simulation button"
+DEFAULT_LANG_SETTINGS_TOUCHUI_SHOWOVERWRITE simple "Show overwrite save button"
 
 DEFAULT_LANG_SIGN_ALIGNLEFT   simple "Left"
 DEFAULT_LANG_SIGN_ALIGNMIDDLE simple "Middle"

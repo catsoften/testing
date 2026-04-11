@@ -16,6 +16,9 @@ namespace Powder::Gui
 		int32_t hugeSpinner;
 		int32_t heightToFitSize;
 
+		void SetDefault();
+		void SetTouch();
+
 		CommonMetrics();
 	};
 }

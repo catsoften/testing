@@ -146,14 +146,14 @@ namespace Powder::Activity
 			g.DrawRect(Rect{ r.pos, thumbnailSize }, colors.edge);
 			view.SetAlignmentSecondary(Gui::Alignment::top);
 			bool checkboxHovered = false;
-			if (selectable && saveButtonHovered)
+			if (selectable && (saveButtonHovered || g.GetTouchUi()))
 			{
 				auto saveButtonHover = view.ScopedVPanel("saveButtonHover");
 				view.SetParentFillRatioSecondary(0);
 				view.SetPadding(4, 4);
 				view.SetAlignmentSecondary(Gui::Alignment::right);
 				view.BeginCheckbox("selected", "", item.selected, Gui::View::CheckboxFlags::none);
-				view.SetSize(13);
+				view.SetSize(g.IfTouchUi(24, 13));
 				view.SetParentFillRatioSecondary(0);
 				checkboxHovered = view.IsHoveredVisually();
 				if (view.EndCheckbox())
@@ -161,7 +161,7 @@ namespace Powder::Activity
 					item.zoomBeganAt.reset();
 				}
 			}
-			if (zoomThumbnailRect && !checkboxHovered)
+			if (zoomThumbnailRect && !checkboxHovered && !g.GetTouchUi())
 			{
 				if (!item.zoomBeganAt)
 				{

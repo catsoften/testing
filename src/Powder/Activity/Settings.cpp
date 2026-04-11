@@ -290,7 +290,13 @@ namespace Powder::Activity
 			auto getter,
 			auto setter
 		) {
+			auto &g = GetHost();
+
 			auto vPanel = ScopedVPanel(key);
+			if (g.GetTouchUi())
+			{
+				SetSize(Common{});
+			}
 			SetParentFillRatio(0);
 			auto value = (game.*getter)();
 			BeginCheckbox("checkbox", BuildString(title, "\n\bg", details), value, CheckboxFlags::multiline);
@@ -506,6 +512,33 @@ namespace Powder::Activity
 
 	void Settings::GuiInterface()
 	{
+		auto &g = GetHost();
+
+		auto checkbox = [this](
+			ComponentKey key,
+			Lang::Translation &title,
+			bool &value,
+			bool enabled,
+			Size indent
+		) {
+			auto &g = GetHost();
+
+			auto hPanel = ScopedHPanel(key);
+			SetPadding(indent * indentSize, 0, 0, 0);
+			if (g.GetTouchUi())
+			{
+				SetSize(Common{});
+			}
+			SetParentFillRatio(0);
+			auto checkboxFlags = CheckboxFlags::multiline;
+			BeginCheckbox("checkbox", title, value, checkboxFlags);
+			SetEnabled(enabled);
+			auto changed = EndCheckbox();
+			return changed;
+		};
+
+		bool changed = false;
+
 		{
 			TextSeparator("language", "DEFAULT_LANG_SETTINGS_LANG"_St);
 			auto windowScale = ScopedHPanel("windowScale");
@@ -525,6 +558,49 @@ namespace Powder::Activity
 				Lang::Language::Ref().Load(loadedIndex);
 			}
 		}
+
+		TextSeparator("touchUi", "DEFAULT_LANG_SETTINGS_TOUCHUI"_St);
+
+		auto isTouchUi = g.GetTouchUi();
+		changed |= checkbox(
+			"touchUiEnable",
+			"DEFAULT_LANG_SETTINGS_TOUCHUI_ENABLE"_St,
+			isTouchUi,
+			true,
+			0
+		);
+
+		changed |= checkbox(
+			"touchUiHoldToClear",
+			"DEFAULT_LANG_SETTINGS_TOUCHUI_HOLDTOCLEAR"_St,
+			game.holdToClear,
+			isTouchUi,
+			1
+		);
+
+		changed |= checkbox(
+			"touchUiShowOverwrite",
+			"DEFAULT_LANG_SETTINGS_TOUCHUI_SHOWOVERWRITE"_St,
+			game.showOverwrite,
+			isTouchUi,
+			1
+		);
+
+		if (changed)
+		{
+			auto &prefs = GlobalPrefs::Ref();
+			GlobalPrefs::DeferWrite dw(prefs);
+
+			g.SetTouchUi(isTouchUi);
+			auto windowParameters = g.GetWindowParameters();
+			windowParameters.windowSize = isTouchUi ? Vec2<int>{ 644, 416 } : Vec2<int>{ 629, 424 };
+			g.SetWindowParameters(windowParameters);
+			game.shouldUpdateToolAtlas = true;
+			prefs.Set("TouchUi.Enable", isTouchUi);
+
+			prefs.Set("TouchUi.HoldToClear", game.holdToClear);
+			prefs.Set("TouchUi.ShowOverwrite", game.showOverwrite);
+		}
 	}
 
 	void Settings::GuiVideo()
@@ -541,8 +617,14 @@ namespace Powder::Activity
 			bool round,
 			Size indent
 		) {
+			auto &g = GetHost();
+
 			auto hPanel = ScopedHPanel(key);
 			SetPadding(indent * indentSize, 0, 0, 0);
+			if (g.GetTouchUi())
+			{
+				SetSize(Common{});
+			}
 			SetParentFillRatio(0);
 			auto checkboxFlags = CheckboxFlags::multiline;
 			if (round)
@@ -663,7 +745,7 @@ namespace Powder::Activity
 
 		if (changed)
 		{
-			windowParameters.fixedScale = scaleOptions[scaleIndex].scale;
+			//windowParameters.fixedScale = scaleOptions[scaleIndex].scale;
 			g.SetWindowParameters(windowParameters);
 			windowParameters.SetPrefs();
 		}

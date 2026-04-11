@@ -15,6 +15,11 @@ void OpenURI(ByteString uri)
 	}
 }
 
+void ShareText(ByteString text)
+{
+	fprintf(stderr, "cannot share text: not implemented\n");
+}
+
 long unsigned int GetTime()
 {
 	struct timeval s;

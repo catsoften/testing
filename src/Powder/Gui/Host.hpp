@@ -262,6 +262,18 @@ namespace Powder::Gui
 			return globalQuit;
 		}
 
+		void SetTouchUi(bool newTouchUi)
+		{
+			touchUi = newTouchUi;
+			if (newTouchUi)
+			{
+				commonMetrics.SetTouch();
+			}
+			else
+			{
+				commonMetrics.SetDefault();
+			}
+		}
 		bool GetTouchUi() const
 		{
 			return touchUi;
@@ -316,6 +328,11 @@ namespace Powder::Gui
 		const CommonMetrics &GetCommonMetrics() const
 		{
 			return commonMetrics;
+		}
+
+		auto IfTouchUi(auto ifTrue, auto ifFalse)
+		{
+			return touchUi ? ifTrue : ifFalse;
 		}
 	};
 }

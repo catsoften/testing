@@ -17,6 +17,7 @@ namespace Powder::Activity
 		game(newGame),
 		threadPool(newGame.GetThreadPool()),
 		gameSave(newGameSave),
+		focusTitle(!GetHost().GetTouchUi()),
 		interactiveThumbnail(GlobalPrefs::Ref().Get("InteractiveSaveThumbnail", false)) // TODO-REDO_UI-POSTCLEANUP: think of a better name
 	{
 		UpdateItemTitle();
@@ -126,7 +127,7 @@ namespace Powder::Activity
 			if (Checkbox("checkbox", "DEFAULT_LANG_SAVER_INTERACTIVE"_St, interactiveThumbnail))
 			{
 				GlobalPrefs::Ref().Set("InteractiveSaveThumbnail", interactiveThumbnail);
-				focusTitle = true;
+				focusTitle = !g.GetTouchUi();
 			}
 		}
 		GuiRight();

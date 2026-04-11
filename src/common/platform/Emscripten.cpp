@@ -22,6 +22,11 @@ void OpenURI(ByteString uri)
 	}, uri.c_str());
 }
 
+void ShareText(ByteString text)
+{
+	fprintf(stderr, "cannot share text: not implemented\n");
+}
+
 void DoRestart()
 {
 	EM_ASM({

@@ -30,6 +30,8 @@ namespace Powder::Activity
 		std::vector<ScaleOption> scaleOptions;
 		int32_t scaleIndex = 0;
 
+		bool newTouchUi;
+
 		int32_t currentCategory = 0;
 		void GuiSimulation();
 		void GuiAmbientAirTemp();

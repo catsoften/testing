@@ -15,15 +15,18 @@ namespace Powder::Gui
 		};
 		{
 			auto &component = *GetCurrentComponent();
-			if (component.prevContent.enabled)
-			{
-				SetHandleButtons(true);
-			}
+			SetHandleButtons(true);
 			if (!component.prevContent.enabled)
 			{
-				edgeColor.Alpha /= 2;
-				color.Alpha /= 2;
-				backgroundColor.Alpha /= 2;
+				edgeColor.Red /= 2;
+				edgeColor.Green /= 2;
+				edgeColor.Blue /= 2;
+				color.Red /= 2;
+				color.Green /= 2;
+				color.Blue /= 2;
+				backgroundColor.Red /= 2;
+				backgroundColor.Green /= 2;
+				backgroundColor.Blue /= 2;
 				if (backgroundColor != 0x00000000_argb)
 				{
 					g.FillRect(component.rect, backgroundColor);

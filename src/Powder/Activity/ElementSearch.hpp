@@ -20,6 +20,7 @@ namespace Powder::Activity
 		std::string query;
 		Tool *lastHoveredTool = nullptr;
 		bool focusQuery = true;
+		bool toggleFavorite = false;
 		std::shared_ptr<ActionContext> rootContext;
 
 		std::unique_ptr<Gui::StaticTexture> toolAtlasTexture;

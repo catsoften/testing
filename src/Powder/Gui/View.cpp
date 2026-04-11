@@ -98,6 +98,18 @@ namespace Powder::Gui
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:
+			SetMousePos(Pos2{ event.button.x, event.button.y });
+			if (g.GetTouchUi() && mousePos)
+			{
+				for (auto &index : layoutRootIndices)
+				{
+					UpdateUnderMouse(componentStore[index]);
+					if (underMouseIndex)
+					{
+						break;
+					}
+				}
+			}
 			for (auto &index : popupIndices)
 			{
 				auto &component = componentStore[index];
@@ -123,6 +135,7 @@ namespace Powder::Gui
 					event.button.button,
 					*mousePos,
 					handlePanIndex,
+					SDL_GetTicks(),
 				};
 				return true;
 			}

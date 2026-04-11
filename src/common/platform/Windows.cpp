@@ -33,6 +33,11 @@ void OpenURI(ByteString uri)
 	}
 }
 
+void ShareText(ByteString text)
+{
+	fprintf(stderr, "cannot share text: not implemented\n");
+}
+
 void Millisleep(long int t)
 {
 	Sleep(t);

@@ -40,9 +40,6 @@ elif host_platform == 'android'
 		'PosixProc.cpp',
 		'ExitCommon.cpp',
 	)
-	powder_files += files(
-		'MainCommon.cpp',
-	)
 elif host_platform == 'emscripten'
 	use_bluescreen = false
 	can_install_enforce_no = true

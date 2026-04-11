@@ -2,6 +2,7 @@
 #include "Common/Log.hpp"
 #include "Game.hpp"
 #include "Gui/Host.hpp"
+#include "Gui/Icons.hpp"
 #include "Gui/SdlAssert.hpp"
 #include "Gui/StaticTexture.hpp"
 #include "Gui/ViewUtil.hpp"
@@ -12,8 +13,6 @@ namespace Powder::Activity
 {
 	namespace
 	{
-		constexpr int32_t toolButtonsPerRow         =  7;
-		constexpr int32_t maxRows                   = 12; // and an extra half row is shown to indicate that scrolling is possible
 		constexpr Gui::View::Size toolButtonPadding =  2;
 		constexpr Gui::View::Size toolButtonSpacing =  1;
 	}
@@ -37,7 +36,11 @@ namespace Powder::Activity
 			action->begin = [this, index]() {
 				if (lastHoveredTool)
 				{
-					if (!GetHost().GetTouchUi())
+					if (toggleFavorite)
+					{
+						game.ToggleFavorite(lastHoveredTool);
+					}
+					else if (!GetHost().GetTouchUi())
 					{
 						game.SelectTool(index, lastHoveredTool);
 						Exit();
@@ -47,7 +50,7 @@ namespace Powder::Activity
 				return InputDisposition::unhandled;
 			};
 			action->end = [this, index]() {
-				if (GetHost().GetTouchUi() && lastHoveredTool)
+				if (GetHost().GetTouchUi() && lastHoveredTool && !toggleFavorite)
 				{
 					game.SelectTool(index, lastHoveredTool);
 					Exit();
@@ -146,6 +149,10 @@ namespace Powder::Activity
 
 	ElementSearch::DispositionFlags ElementSearch::GetDisposition() const
 	{
+		if (GetHost().GetTouchUi())
+		{
+			return DispositionFlags::cancelMissing;
+		}
 		if (!matchingTools.empty())
 		{
 			return DispositionFlags::none;
@@ -155,15 +162,29 @@ namespace Powder::Activity
 
 	void ElementSearch::Ok()
 	{
-		game.SelectTool(0, matchingTools[0]->tool.get());
+		if (!GetHost().GetTouchUi())
+		{
+			game.SelectTool(0, matchingTools[0]->tool.get());
+
+		}
 		Exit();
 	}
 
 	void ElementSearch::Gui()
 	{
-		auto elementSearch = ScopedDialog("elementSearch", "DEFAULT_LANG_ELEMENTSEARCH_TITLE"_St);
-		BeginTextbox("query", query, BuildString("[", "DEFAULT_LANG_ELEMENTSEARCH_QUERY"_St, "]"), TextboxFlags::none);
+		auto &g = GetHost();
+		int32_t toolButtonsPerRow = g.IfTouchUi(14, 8);
+		constexpr int32_t maxRows = 12; // and an extra half row is shown to indicate that scrolling is possible
+
+		auto title = g.IfTouchUi("DEFAULT_LANG_ELEMENTSEARCH_SELECT"_St, "DEFAULT_LANG_ELEMENTSEARCH_TITLE"_St)();
+		auto elementSearch = ScopedDialog("elementSearch", title);
+
+		BeginHPanel("searchBar");
 		SetSize(Common{});
+		SetSpacing(3);
+
+		BeginTextbox("query", query, BuildString("[", "DEFAULT_LANG_ELEMENTSEARCH_QUERY"_St, "]"), TextboxFlags::none);
+		SetMaxSizeSecondary(MaxSizeFitParent{});
 		if (focusQuery)
 		{
 			GiveInputFocus();
@@ -173,41 +194,135 @@ namespace Powder::Activity
 		{
 			Update();
 		}
+		BeginButton("setFavorite", Gui::iconStar, toggleFavorite ? ButtonFlags::stuck : ButtonFlags::none, 0xFFFFCC00_argb);
+		SetSize(Common{});
+		if (EndButton())
+		{
+			toggleFavorite = !toggleFavorite;
+		}
+
+		EndPanel();
+
 		auto tools = ScopedScrollpanel("tools");
 		auto panning = ScrollpanelIsPanning();
 		SetAlignment(Gui::Alignment::top);
 		SetMaxSizeSecondary(MaxSizeFitParent{});
 		SetParentFillRatio(0);
-		SetSize((Game::toolTextureDataSize.Y + 2 * toolButtonPadding + toolButtonSpacing) * (2 * maxRows + 1) / 2 + toolButtonSpacing + 2);
-		SetSizeSecondary((Game::toolTextureDataSize.X + 2 * toolButtonPadding + toolButtonSpacing) * toolButtonsPerRow + toolButtonSpacing + 2);
+		SetSize((game.toolTextureDataSize.Y + 2 * toolButtonPadding + toolButtonSpacing) * (2 * maxRows + 1) / 2 + toolButtonSpacing + 2);
+		SetSizeSecondary((game.toolTextureDataSize.X + 2 * toolButtonPadding + toolButtonSpacing) * toolButtonsPerRow + toolButtonSpacing + 2);
 		SetPadding(toolButtonPadding);
 		SetSpacing(toolButtonSpacing);
-		auto &g = GetHost();
 		auto r = GetRect();
 		lastHoveredTool = nullptr;
 		int32_t buttonIndex = 0;
-		while (buttonIndex < int32_t(matchingTools.size()))
+		int32_t rowIndex = 0;
+		bool inHPanel = false;
+
+		auto addTool = [&](const GameToolInfo &info, bool rightAlign)
 		{
-			auto bPanel = ScopedHPanel(buttonIndex);
-			SetAlignment(Gui::Alignment::left);
-			SetSpacing(1);
-			SetParentFillRatio(0);
-			for (int32_t i = 0; i < toolButtonsPerRow; ++i)
+			if (!inHPanel)
 			{
-				auto cell = ScopedComponent(buttonIndex);
-				SetSize(Game::toolTextureDataSize.X + 2 * toolButtonPadding);
-				auto *info = (buttonIndex < int32_t(matchingTools.size())) ? matchingTools[buttonIndex] : nullptr;
-				if (info && game.GuiToolButton(*this, *info, *toolAtlasTexture, true))
+				BeginHPanel(rowIndex++);
+				if (rightAlign)
 				{
-					if (!panning)
-					{
-						// QueueToolTip(info->tool->Description.ToUtf8(), ...) // TODO-REDO_UI
-						lastHoveredTool = info->tool.get();
-					}
+					SetAlignment(Gui::Alignment::right);
+					SetOrder(Order::rightToLeft);
 				}
-				buttonIndex += 1;
+				else
+				{
+					SetAlignment(Gui::Alignment::left);
+				}
+
+				inHPanel = true;
+			}
+
+			auto cell = ScopedComponent(buttonIndex++);
+			SetSize(game.toolTextureDataSize.X + 2 * toolButtonPadding);
+			if (game.GuiToolButton(*this, info, *toolAtlasTexture, true))
+			{
+				if (!panning)
+				{
+					// QueueToolTip(info->tool->Description.ToUtf8(), ...) // TODO-REDO_UI
+					lastHoveredTool = info.tool.get();
+				}
+			}
+
+			if (inHPanel && buttonIndex % toolButtonsPerRow == 0)
+			{
+				EndPanel();
+				inHPanel = false;
+			}
+		};
+
+		if (query.empty())
+		{
+			auto &sd = SimulationData::CRef();
+			auto &tools = game.GetTools();
+
+			static const std::array<std::string, 16> iconOverrides = {{ // TODO-REDO_UI: move this where menu sections are defined
+				Gui::iconWalls,
+				Gui::iconElectronic,
+				Gui::iconPowered,
+				Gui::iconSensor,
+				Gui::iconForce,
+				Gui::iconExplosive,
+				Gui::iconGas,
+				Gui::iconLiquid,
+				Gui::iconPowder,
+				Gui::iconSolid,
+				Gui::iconRadioactive,
+				Gui::iconStar,
+				Gui::iconGol,
+				Gui::iconTool,
+				Gui::iconFavorite,
+				Gui::iconDeco,
+			}};
+			Assert(sd.msections.size() == iconOverrides.size());
+
+			auto addMenu = [&](int32_t i) {
+				TextSeparator(rowIndex++, BuildString(" ", sd.msections[i].name, " ", iconOverrides[i], " "));
+
+				buttonIndex = 0;
+				for (auto &info : tools)
+				{
+						if (info && info->tool->MenuVisible && (info->tool->MenuSection == i || (i == SC_FAVORITES && game.favorites.contains(info->tool->Identifier))))
+						{
+								addTool(*info, true);
+						}
+				}
+
+				if (inHPanel)
+				{
+						EndPanel();
+						inHPanel = false;
+				}
+			};
+
+			if (!game.favorites.empty())
+			{
+				addMenu(SC_FAVORITES);
+			}
+			for (int32_t i = 0; i < int32_t(sd.msections.size()); i++)
+			{
+				if (i != SC_FAVORITES)
+				{
+					addMenu(i);
+				}
 			}
 		}
+		else
+		{
+			while (buttonIndex < int32_t(matchingTools.size()))
+			{
+				addTool(*matchingTools[buttonIndex], false);
+			}
+		}
+
+		if (inHPanel)
+		{
+			EndPanel();
+		}
+
 		g.DrawRect(r, 0xFFFFFFFF_argb);
 	}
 

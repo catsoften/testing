@@ -6,19 +6,21 @@ namespace Powder::Gui
 {
 	namespace
 	{
-		constexpr View::Size boxSize    = 13;
-		constexpr View::Size boxSpacing =  4;
+		constexpr View::Size boxSize      = 13;
+		constexpr View::Size boxSizeLarge = 24;
+		constexpr View::Size boxSpacing   =  4;
 
 		using SanePoint = Gui::View::ExtendedSize2<int32_t>;
 
+		template<int size>
 		constexpr auto MakeBitmap(auto &&thing)
 		{
 			auto bitmap = std::to_array(thing);
-			static_assert(int32_t(bitmap.size() - 1) == boxSize * boxSize);
+			static_assert(int32_t(bitmap.size() - 1) == size * size);
 			return bitmap;
 		}
 
-		constexpr auto roundEdgeBitmap = MakeBitmap(
+		constexpr auto roundEdgeBitmap = MakeBitmap<boxSize>(
 			"    #####    "
 			"  ##     ##  "
 			" #         # "
@@ -34,7 +36,34 @@ namespace Powder::Gui
 			"    #####    "
 		);
 
-		constexpr auto roundBulletBitmap = MakeBitmap(
+		constexpr auto roundEdgeLargeBitmap = MakeBitmap<boxSizeLarge>(
+			"                        "
+			"                        "
+			"        ########        "
+			"      ###      ###      "
+			"     ##          ##     "
+			"    ##            ##    "
+			"   ##              ##   "
+			"   #                #   "
+			"  ##                ##  "
+			"  #                  #  "
+			"  #                  #  "
+			"  #                  #  "
+			"  #                  #  "
+			"  #                  #  "
+			"  #                  #  "
+			"  ##                ##  "
+			"   #                #   "
+			"   ##              ##   "
+			"    ##            ##    "
+			"     ##          ##     "
+			"      ###      ###      "
+			"        ########        "
+			"                        "
+			"                        "
+		);
+
+		constexpr auto roundBulletBitmap = MakeBitmap<boxSize>(
 			"             "
 			"             "
 			"             "
@@ -48,6 +77,33 @@ namespace Powder::Gui
 			"             "
 			"             "
 			"             "
+		);
+
+		constexpr auto roundBulletLargeBitmap = MakeBitmap<boxSizeLarge>(
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"         ######         "
+			"        ########        "
+			"       ##########       "
+			"       ##########       "
+			"       ##########       "
+			"       ##########       "
+			"       ##########       "
+			"       ##########       "
+			"        ########        "
+			"         ######         "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
+			"                        "
 		);
 
 		template<auto Bitmap>
@@ -61,7 +117,7 @@ namespace Powder::Gui
 			return size;
 		}
 
-		template<auto Bitmap>
+		template<auto Bitmap, int size>
 		constexpr auto MakePointList()
 		{
 			std::array<SanePoint, GetPointListSize<Bitmap>()> pointList;
@@ -70,7 +126,7 @@ namespace Powder::Gui
 			{
 				if (Bitmap[i] == '#')
 				{
-					pointList[cursor] = { i / boxSize, i % boxSize };
+					pointList[cursor] = { i / size, i % size };
 					cursor += 1;
 				}
 			}
@@ -82,6 +138,7 @@ namespace Powder::Gui
 	{
 		auto &g = GetHost();
 		auto edgeColor = 0xFFFFFFFF_argb;
+		auto size = g.IfTouchUi(boxSizeLarge, boxSize);
 		BeginComponent(key);
 		SetPrimaryAxis(Axis::vertical);
 		auto enabled = GetCurrentComponent()->prevContent.enabled;
@@ -97,11 +154,11 @@ namespace Powder::Gui
 		auto &parentComponent = *GetParentComponent();
 		if (parentComponent.prevLayout.primaryAxis == Axis::horizontal)
 		{
-			SetMinSizeSecondary(boxSize);
+			SetMinSizeSecondary(size);
 		}
 		else
 		{
-			SetMinSize(boxSize);
+			SetMinSize(size);
 		}
 		if (!text.Empty())
 		{
@@ -127,21 +184,32 @@ namespace Powder::Gui
 			EndText();
 		}
 		auto r = GetRect();
-		SetPadding(0, 0, boxSize + (text.Empty() ? 0 : boxSpacing), 0);
-		Rect rr{ r.TopLeft(), { boxSize, boxSize } };
+		SetPadding(0, 0, size + (text.Empty() ? 0 : boxSpacing), 0);
+		Rect rr{ r.TopLeft(), { size, size } };
 		auto round = bool(CheckboxFlagBase(checkboxFlags) & CheckboxFlagBase(CheckboxFlags::round));
 		if (round)
 		{
-			constexpr auto pointList = MakePointList<roundEdgeBitmap>();
-			for (auto &p : pointList)
+			if (g.GetTouchUi())
 			{
-				g.DrawPoint({ rr.pos.X + p.X, rr.pos.Y + p.Y }, edgeColor);
+				constexpr auto pointList = MakePointList<roundEdgeLargeBitmap, boxSizeLarge>();
+				for (auto &p : pointList)
+				{
+					g.DrawPoint({ rr.pos.X + p.X, rr.pos.Y + p.Y }, edgeColor);
+				}
+			}
+			else
+			{
+				constexpr auto pointList = MakePointList<roundEdgeBitmap, boxSize>();
+				for (auto &p : pointList)
+				{
+					g.DrawPoint({ rr.pos.X + p.X, rr.pos.Y + p.Y }, edgeColor);
+				}
 			}
 		}
 		else
 		{
-			g.FillRect(rr, 0xFF000000_argb);
-			g.DrawRect(rr, edgeColor);
+			g.FillRect(rr.Inset(g.IfTouchUi(2, 0)), 0xFF000000_argb);
+			g.DrawRect(rr.Inset(g.IfTouchUi(2, 0)), edgeColor);
 		}
 		if (IsClicked(SDL_BUTTON_LEFT))
 		{
@@ -151,15 +219,26 @@ namespace Powder::Gui
 		{
 			if (round)
 			{
-				static constexpr auto pointList = MakePointList<roundBulletBitmap>();
-				for (auto &p : pointList)
+				if (g.GetTouchUi())
 				{
-					g.DrawPoint({ rr.pos.X + p.X, rr.pos.Y + p.Y }, edgeColor);
+					static constexpr auto pointList = MakePointList<roundBulletLargeBitmap, boxSizeLarge>();
+					for (auto &p : pointList)
+					{
+						g.DrawPoint({ rr.pos.X + p.X, rr.pos.Y + p.Y }, edgeColor);
+					}
+				}
+				else
+				{
+					static constexpr auto pointList = MakePointList<roundBulletBitmap, boxSize>();
+					for (auto &p : pointList)
+					{
+						g.DrawPoint({ rr.pos.X + p.X, rr.pos.Y + p.Y }, edgeColor);
+					}
 				}
 			}
 			else
 			{
-				g.FillRect(rr.Inset(3), edgeColor);
+				g.FillRect(rr.Inset(g.IfTouchUi(6, 3)), edgeColor);
 			}
 		}
 	}
@@ -177,7 +256,7 @@ namespace Powder::Gui
 		SetSize(size);
 		if (std::holds_alternative<SpanAll>(size))
 		{
-			SetMinSize(boxSize);
+			SetMinSize(GetHost().IfTouchUi(boxSizeLarge, boxSize));
 		}
 		return EndCheckbox();
 	}
