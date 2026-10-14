@@ -183,5 +183,10 @@ namespace Powder::Activity
 		{
 			gameStack = newGameStack;
 		}
+
+		int32_t GetId() const
+		{
+			return id;
+		}
 	};
 }

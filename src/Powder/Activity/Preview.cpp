@@ -6,6 +6,7 @@
 #include "Config.h"
 #include "Game.hpp"
 #include "RequestView.hpp"
+#include "ShareMenu.hpp"
 #include "Votebars.hpp"
 #include "Common/Format.hpp"
 #include "Gui/Colors.hpp"
@@ -717,8 +718,9 @@ namespace Powder::Activity
 
 	void Preview::GuiManage()
 	{
+		auto &g = GetHost();
 		auto manage = ScopedHPanel("manage");
-		SetSize(GetHost().GetCommonMetrics().heightToFitSize);
+		SetSize(g.GetCommonMetrics().heightToFitSize);
 		SetPadding(Common{});
 		SetSpacing(Common{});
 		BeginButton("open", BuildString(Gui::iconOpen, " ", "DEFAULT_LANG_PREVIEW_OPEN"_St), ButtonFlags::autoWidth);
@@ -741,7 +743,7 @@ namespace Powder::Activity
 		{
 			auto request = std::make_unique<http::FavouriteSaveRequest>(id, !infoData->info->Favourite);
 			requestedFavorState = request->Favourite();
-			auto requestView = MakeRequestView(GetHost(), "DEFAULT_LANG_PREVIEW_FAVOR_PROGRESS"_St, "DEFAULT_LANG_PREVIEW_FAVOR_FAILED"_St, std::move(request));
+			auto requestView = MakeRequestView(g, "DEFAULT_LANG_PREVIEW_FAVOR_PROGRESS"_St, "DEFAULT_LANG_PREVIEW_FAVOR_FAILED"_St, std::move(request));
 			favorFuture = requestView->GetFuture();
 			requestView->Start();
 			PushAboveThis(requestView);
@@ -751,16 +753,27 @@ namespace Powder::Activity
 		{
 			// TODO
 		}
-		BeginButton("openinBrowser", BuildString(Gui::iconOpen, " ", "DEFAULT_LANG_PREVIEW_OPENINBROWSER"_St), ButtonFlags::autoWidth);
-		if (EndButton())
+		if (g.GetTouchUi())
 		{
-			format::Url url{ ByteString::Build(SERVER, "/Browse/View.html") };
-			url.params["ID"] = ByteString::Build(id);
-			if (version)
+			BeginButton("share", BuildString(Gui::iconShare, " ", "DEFAULT_LANG_SHARE"_St), ButtonFlags::autoWidth);
+			if (EndButton())
 			{
-				url.params["Date"] = ByteString::Build(version);
+				PushAboveThis(std::make_shared<Powder::Activity::ShareMenu>(*this));
 			}
-			Platform::OpenURI(url.ToByteString());
+		}
+		else
+		{
+			BeginButton("openinBrowser", BuildString(Gui::iconOpen, " ", "DEFAULT_LANG_PREVIEW_OPENINBROWSER"_St), ButtonFlags::autoWidth);
+			if (EndButton())
+			{
+				format::Url url{ ByteString::Build(SERVER, "/Browse/View.html") };
+				url.params["ID"] = ByteString::Build(id);
+				if (version)
+				{
+					url.params["Date"] = ByteString::Build(version);
+				}
+				Platform::OpenURI(url.ToByteString());
+			}
 		}
 	}
 

@@ -13,6 +13,7 @@ namespace Powder::Activity
 		void OpenItem(BrowserItem &item) final override;
 		void AcquireItemThumbnail(BrowserItem &item) final override;
 		void BeginSearch() final override;
+		void GuiSaveButtonContextmenu(BrowserItem &item) final override;
 		void GuiManage() final override;
 		void GuiNoResults() final override;
 		void GuiTitle() final override;

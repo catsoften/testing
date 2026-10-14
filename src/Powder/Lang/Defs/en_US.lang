@@ -109,8 +109,6 @@ DEFAULT_LANG_BROWSER_QUERY          simple "search, F1 for help" # placeholder s
 DEFAULT_LANG_BROWSER_SEARCHFAILED   simple "Search failed: @0@" # @0@: reason
 DEFAULT_LANG_BROWSER_SELECT         simple "Select"
 
-DEFAULT_LANG_SETPAGE_SELECTPAGE simple "Select page"
-
 DEFAULT_LANG_CONFIRMQUIT simple "Exit game"
 
 DEFAULT_LANG_CONSOLE_COMMAND    simple "command" # placeholder shown when the command box is empty
@@ -389,6 +387,8 @@ DEFAULT_LANG_SELECTEXPL_COPY  simple "??? to specify an area to copy, ??? to can
 DEFAULT_LANG_SELECTEXPL_CUT   simple "??? to specify an area to copy then cut, ??? to cancel"
 DEFAULT_LANG_SELECTEXPL_STAMP simple "??? to specify an area to stamp, ??? to cancel"
 
+DEFAULT_LANG_SETPAGE_SELECTPAGE simple "Select page"
+
 DEFAULT_LANG_SETTINGS_DISP simple "Display mode"
 
 DEFAULT_LANG_SETTINGS_ENV           simple "Environment"
@@ -435,6 +435,13 @@ DEFAULT_LANG_SETTINGS_TOUCHUI               simple "Touchscreen UI"
 DEFAULT_LANG_SETTINGS_TOUCHUI_ENABLE        simple "Touchscreen friendly UI"
 DEFAULT_LANG_SETTINGS_TOUCHUI_HOLDTOCLEAR   simple "Require holding clear simulation button"
 DEFAULT_LANG_SETTINGS_TOUCHUI_SHOWOVERWRITE simple "Show overwrite save button"
+
+DEFAULT_LANG_SHARE simple "Share"
+
+DEFAULT_LANG_SHAREMENU_COPY  simple "Copy ID to clipboard"
+DEFAULT_LANG_SHAREMENU_OPEN  simple "Open in browser"
+DEFAULT_LANG_SHAREMENU_SHARE simple "Share save"
+DEFAULT_LANG_SHAREMENU_TITLE simple "Share/Open"
 
 DEFAULT_LANG_SIGN_ALIGNLEFT   simple "Left"
 DEFAULT_LANG_SIGN_ALIGNMIDDLE simple "Middle"

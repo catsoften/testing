@@ -87,6 +87,15 @@ namespace Powder::Activity
 		});
 	}
 
+	void LocalBrowser::GuiSaveButtonContextmenu(BrowserItem &item)
+	{
+		auto &localItem = static_cast<LocalItem &>(item);
+		if (ContextmenuButton("share", "DEFAULT_LANG_SHARE"_St))
+		{
+			Platform::ShareFile(localItem.path);
+		}
+	}
+
 	void LocalBrowser::GuiManage()
 	{
 		auto &itemsData = std::get<ItemsData>(items);

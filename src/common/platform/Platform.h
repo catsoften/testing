@@ -14,7 +14,9 @@ namespace Platform
 	void DoRestart();
 
 	void OpenURI(ByteString uri);
+
 	void ShareText(ByteString text);
+	void ShareFile(ByteString path);
 
 	void Millisleep(long int t);
 	long unsigned int GetTime();

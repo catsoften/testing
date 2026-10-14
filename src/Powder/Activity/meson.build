@@ -25,6 +25,7 @@ powder_src += files(
 	'Saver.cpp',
 	'SetPage.cpp',
 	'Settings.cpp',
+	'ShareMenu.cpp',
 	'Sign.cpp',
 	'StampBrowser.cpp',
 	'Tags.cpp',

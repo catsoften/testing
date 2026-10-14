@@ -66,6 +66,11 @@ void ShareText(ByteString text)
 	fprintf(stderr, "cannot share text: not implemented\n");
 }
 
+void ShareFile(ByteString path)
+{
+	fprintf(stderr, "cannot share file: not implemented\n");
+}
+
 long unsigned int GetTime()
 {
 	struct timespec s;
